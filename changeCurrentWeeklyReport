@@ -1,0 +1,12 @@
+#!/bin/zsh
+
+TARGET_FILE=$HOME/.config/zsh/export.sh
+CURRENT_DIR=$(pwd)
+BASE_NAME=$(basename $CURRENT_DIR)
+
+sed -i "s/export CURRENT_REPORT.*/export CURRENT_REPORT='$BASE_NAME'/g" $TARGET_FILE
+echo "Changing CURRENT_REPORT to $BASE_NAME"
+/usr/bin/git --git-dir=$HOME/.cfg/ --work-tree=$HOME add $TARGET_FILE
+/usr/bin/git --git-dir=$HOME/.cfg/ --work-tree=$HOME commit -m "Update weekly_report path."
+/usr/bin/git --git-dir=$HOME/.cfg/ --work-tree=$HOME push
+source $HOME/.zshrc

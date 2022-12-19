@@ -1,0 +1,25 @@
+#!/usr/bin/sh
+
+PROJECT_NAME=$1
+mkdir $PROJECT_NAME
+cd $PROJECT_NAME
+
+touch Makefile
+echo "PROJECT_NAME=${PROJECT_NAME}" >> Makefile
+echo "" >> Makefile
+echo "all : \$(PROJECT_NAME).mla" >> Makefile
+echo -e "\tmaple test.mpl" >> Makefile
+echo "" >> Makefile
+echo "\$(PROJECT_NAME).mla: \$(PROJECT_NAME).mpl" >> Makefile
+echo -e "\tarchive_maple_project.py \$(PROJECT_NAME) \$(PROJECT_NAME) \$(PROJECT_NAME)" >> Makefile
+
+touch test.mpl
+echo "with(${PROJECT_NAME}):" >> test.mpl
+
+touch "${PROJECT_NAME}.mpl"
+echo "${PROJECT_NAME} := module() option package;" >> "${PROJECT_NAME}".mpl
+echo "end module;" >> "${PROJECT_NAME}".mpl
+
+CURR_DIR="$PWD"
+OUTPUT=$(grep -nr "$CURR_DIR" "$HOME/.mapleinit" | wc -l | xargs)
+[ "$OUTPUT" = "0" ] && echo "libname := libname, \"$CURR_DIR\":" >> $HOME/.mapleinit

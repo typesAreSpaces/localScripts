@@ -1,0 +1,28 @@
+#!/bin/bash
+
+file_name='/home/jose/Documents/GithubProjects/phd-thesis/Documents/Write-Ups/personal_notes/kldb.tex'
+num_args=$#
+
+if [[ $1 == "-p" ]]
+then
+  curr_index=3
+  file_name=$2
+  if [ ! -f $file_name ] 
+  then
+    touch $file_name
+  fi
+else
+  curr_index=1
+fi
+
+eval "concept=\${$curr_index}"
+echo "\knowledge{notion, index=$concept}" >> $file_name
+echo "| $concept" >> $file_name
+curr_index=$[$curr_index+1]
+
+while [ $curr_index -le $num_args ]
+do
+  eval "synonym=\${$curr_index}"
+  echo "| $synonym" >> $file_name
+  curr_index=$[$curr_index+1]
+done

@@ -1,0 +1,2 @@
+grep -nr $1 . | awk '{print $1}' | grep -o ".*\." | uniq
+

@@ -1,0 +1,6 @@
+#! /bin/sh
+
+for arg in "$@"; do
+  echo 'Sending' $arg 'to ~/tosend'
+  cp -r "$arg" $HOME/tosend
+done
