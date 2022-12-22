@@ -1,0 +1,49 @@
+IMAPAccount unm
+Host outlook.office365.com
+User jabelcastellanosjoo@unm.edu
+AuthMechs XOAUTH2
+PassCmd "~/.local/scripts/mail_scripts/mutt_oauth2.py ~/.local/scripts/mail_scripts/jabelcastellanosjoo@unm.edu.tokens"
+Port 993
+SSLType IMAPS
+CertificateFile /etc/ssl/certs/ca-certificates.crt
+
+IMAPStore unm-remote
+Account unm
+
+MaildirStore unm-local
+Path ~/Mail/unm/
+Inbox ~/Mail/unm/Inbox
+SubFolders Verbatim
+
+Channel unm
+Far :unm-remote:
+Near :unm-local:
+Patterns *
+Create Both
+Expunge Both
+SyncState *
+
+IMAPAccount cs-unm
+Host snape.cs.unm.edu
+User jose.castellanosjoo@cs.unm.edu
+AuthMechs Login
+PassCmd "pass email/jose.castellanosjoo@cs.unm.edu"
+Port 993
+SSLType IMAPS
+CertificateFile /etc/ssl/certs/ca-certificates.crt
+
+IMAPStore cs-unm-remote
+Account cs-unm
+
+MaildirStore cs-unm-local
+Path ~/Mail/cs-unm/
+Inbox ~/Mail/cs-unm/Inbox
+SubFolders Verbatim
+
+Channel cs-unm
+Far :cs-unm-remote:
+Near :cs-unm-local:
+Patterns *
+Create Both
+Expunge Both
+SyncState *
