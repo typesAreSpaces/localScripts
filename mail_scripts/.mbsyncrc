@@ -5,7 +5,7 @@ AuthMechs XOAUTH2
 PassCmd "~/.local/scripts/mail_scripts/mutt_oauth2.py ~/.local/scripts/mail_scripts/jabelcastellanosjoo@unm.edu.tokens"
 Port 993
 SSLType IMAPS
-CertificateFile /etc/ssl/certs/ca-certificates.crt
+CertificateFile ~/.maildir/certificates/root-certificates.pem
 
 IMAPStore unm-remote
 Account unm
@@ -30,7 +30,7 @@ AuthMechs Login
 PassCmd "pass email/jose.castellanosjoo@cs.unm.edu"
 Port 993
 SSLType IMAPS
-CertificateFile /etc/ssl/certs/ca-certificates.crt
+CertificateFile ~/.maildir/certificates/root-certificates.pem
 
 IMAPStore cs-unm-remote
 Account cs-unm
