@@ -12,7 +12,7 @@ import configparser
 import requests
 
 def notify(s):
-    file=open("/home/jose/.unread_email", "w")
+    file=open("~/.unread_email", "w")
     file.write(s)
     file.close()
 
