@@ -1,6 +1,6 @@
 #!/bin/bash
 
-file_name='/home/jose/Documents/GithubProjects/phd-thesis/Documents/Write-Ups/personal_notes/kldb.tex'
+file_name="$HOME/Documents/GithubProjects/phd-thesis/Documents/Write-Ups/personal_notes/kldb.tex"
 num_args=$#
 
 if [[ $1 == "-p" ]]
