@@ -1,7 +1,7 @@
 #!/bin/sh
 
 SOURCE=$HOME/Documents/GithubProjects/phd-thesis/Software/Mathematica/Packages
-TARGET=$HOME/.Mathematica/Applications
+TARGET=$HOME/Library/Mathematica/Applications
 
 for PACKAGE_PATH in $SOURCE/*; do
   PACKAGE_NAME=$(basename $PACKAGE_PATH)
