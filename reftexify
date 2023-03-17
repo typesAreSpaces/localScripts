@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+MAIN_FILE=$1
+
+for file in *.tex; do
+  echo $file
+  echo -e "\n" >> $file
+  echo "%%% Local Variables: ***" >> $file
+  echo "%%% mode:latex ***" >> $file
+  echo "%%% TeX-master: \"$MAIN_FILE.tex\"  ***" >> $file
+  echo "%%% End: ***" >> $file
+done
