@@ -2,11 +2,17 @@
 
 MAIN_FILE=$1
 
+add_message(){
+  echo -e "\n" >> $1
+  echo "%%% Local Variables: ***" >> $1
+  echo "%%% mode:latex ***" >> $1
+  echo "%%% TeX-master: \"$MAIN_FILE.tex\"  ***" >> $1
+  echo "%%% End: ***" >> $1
+}
+
 for file in *.tex; do
   echo $file
-  echo -e "\n" >> $file
-  echo "%%% Local Variables: ***" >> $file
-  echo "%%% mode:latex ***" >> $file
-  echo "%%% TeX-master: \"$MAIN_FILE.tex\"  ***" >> $file
-  echo "%%% End: ***" >> $file
+  if ! grep -q "TeX-master: \"$MAIN_FILE.tex\"" "$file"; then
+    add_message $file
+  fi
 done
