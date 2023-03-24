@@ -10,6 +10,8 @@ add_message(){
   echo "%%% End: ***" >> $1
 }
 
+[ -z "$MAIN_FILE" ] && MAIN_FILE="main"
+
 for file in *.tex; do
   echo $file
   if ! grep -q "TeX-master: \"$MAIN_FILE.tex\"" "$file"; then
