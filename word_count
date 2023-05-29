@@ -1,0 +1,4 @@
+#!/bin/sh
+
+detex main.tex | wc -w | tr -d '[:space:]'
+echo ''
