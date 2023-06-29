@@ -13,7 +13,8 @@ icon_muted="$base_dir/audio-volume-muted-symbolic.symbolic.png"
 time_out=1000
 
 function get_volume {
-  amixer get Master | grep '%' | head -n 1 | cut -d '[' -f 2 | cut -d '%' -f 1
+    pactl list sinks | grep '^[[:space:]]Volume:' | head -n $(( $SINK + 1 )) | tail -n  1 | sed -e 's,.* \([0-9][0-9]*\)%.*,\1,'
+
 }
 
 function is_mute {
@@ -53,11 +54,13 @@ case $1 in
   mute)
     # Toggle mute
     pactl set-sink-mute @DEFAULT_SINK@ toggle
-    if is_mute ; then
-      dunstify -i $icon_muted -t $time_out -r 2593 -u normal "Mute"
-    else
+    if [[ "Mute: no" == $(pactl list sinks | grep '^[[:space:]]Mute:' | xargs) ]]; then
+	echo 'haha';
       send_notification
-    fi
+    else
+	echo 'hehe';
+      dunstify -i $icon_muted -t $time_out -r 2593 -u normal "Mute"
+    fi;
     ;;
 esac
 
