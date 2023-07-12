@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+
+LATEX_TO_IMPORT=$1
+
+if [ "$#" -ne 1 ]; then
+    echo "Illegal number of parameters"
+    exit;
+fi
+
+if [ "$LATEX_TO_IMPORT" == "" ]; then
+    echo "Empty dir name";
+    exit;
+fi;
+
+if [ ! -d "$LATEX_TO_IMPORT" ]; then
+    echo "Dir does not exist";
+    exit;
+fi;
+
+LATEX_PROJ_NAME=$(basename "$LATEX_TO_IMPORT")
+
+cp -r $LATEX_TO_IMPORT $PWD
+mv $LATEX_PROJ_NAME/main.tex $LATEX_PROJ_NAME.tex
+
+for TEX_FILE in $LATEX_PROJ_NAME/*.tex; do
+    echo $TEX_FILE
+    sed -i 's/main.tex/..\/main.tex/g' "$TEX_FILE"
+    sed -i "s/\.\/figures\//\.\/$LATEX_PROJ_NAME\/figures\//g" "$TEX_FILE"
+    sed -i -e "s/\\input{/\\input{$LATEX_PROJ_NAME\//g" "$TEX_FILE"
+done;
+
+for TEX_FILE in $LATEX_PROJ_NAME.tex; do
+    echo $TEX_FILE
+    sed -i 's/main.tex/..\/main.tex/g' "$TEX_FILE"
+    sed -i "s/\.\/figures\//\.\/$LATEX_PROJ_NAME\/figures\//g" "$TEX_FILE"
+    sed -i "s/\\input{/\\input{$LATEX_PROJ_NAME\//g" "$TEX_FILE"
+done;
+

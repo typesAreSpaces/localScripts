@@ -13,7 +13,8 @@ icon_muted="$base_dir/audio-volume-muted-symbolic.symbolic.png"
 time_out=1000
 
 function get_volume {
-  amixer get Master | grep '%' | head -n 1 | cut -d '[' -f 2 | cut -d '%' -f 1
+    pactl list sinks | grep '^[[:space:]]Volume:' | head -n $(( $SINK + 1 )) | tail -n  1 | sed -e 's,.* \([0-9][0-9]*\)%.*,\1,'
+
 }
 
 function is_mute {
@@ -40,24 +41,26 @@ function send_notification {
 case $1 in
   up)
     # Set the volume on (if it was muted)
-    amixer -D pulse set Master on > /dev/null
-    # Up the volume (+ 5%)
-    amixer -D pulse sset Master 5%+ > /dev/null
+    pactl set-sink-mute @DEFAULT_SINK@ 0
+    # Increase volume (+ 5%)
+    pactl set-sink-volume @DEFAULT_SINK@ +5%
     send_notification
     ;;
   down)
-    amixer -D pulse set Master on > /dev/null
-    amixer -D pulse sset Master 5%- > /dev/null
+    pactl set-sink-mute @DEFAULT_SINK@ 0
+    pactl set-sink-volume @DEFAULT_SINK@ -5%
     send_notification
     ;;
   mute)
     # Toggle mute
-    amixer -D pulse set Master 1+ toggle > /dev/null
-    if is_mute ; then
-      dunstify -i $icon_muted -t $time_out -r 2593 -u normal "Mute"
-    else
+    pactl set-sink-mute @DEFAULT_SINK@ toggle
+    if [[ "Mute: no" == $(pactl list sinks | grep '^[[:space:]]Mute:' | xargs) ]]; then
+	echo 'haha';
       send_notification
-    fi
+    else
+	echo 'hehe';
+      dunstify -i $icon_muted -t $time_out -r 2593 -u normal "Mute"
+    fi;
     ;;
 esac
 
