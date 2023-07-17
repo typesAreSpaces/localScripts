@@ -31,7 +31,6 @@ done;
 
 for TEX_FILE in $LATEX_PROJ_NAME.tex; do
     echo $TEX_FILE
-    sed -i 's/main.tex/..\/main.tex/g' "$TEX_FILE"
     sed -i "s/\.\/figures\//\.\/$LATEX_PROJ_NAME\/figures\//g" "$TEX_FILE"
     sed -i "s/\\input{/\\input{$LATEX_PROJ_NAME\//g" "$TEX_FILE"
 done;
