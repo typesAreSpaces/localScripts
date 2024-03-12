@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 
 PROJECT_NAME=$1
 mkdir $PROJECT_NAME
@@ -6,12 +6,37 @@ cd $PROJECT_NAME
 
 touch Makefile
 echo "PROJECT_NAME=${PROJECT_NAME}" >> Makefile
+echo "TEST_FILE=test.mpl" >> Makefile
+echo "SUFFIX=" >> Makefile
+echo "LOG_FILE=log_time\${SUFFIX}.txt" >> Makefile
+echo "OUTPUT=output\${SUFFIX}.txt" >> Makefile
+echo "FLAGS=" >> Makefile
 echo "" >> Makefile
-echo "all : \$(PROJECT_NAME).mla" >> Makefile
-echo -e "\tmaple test.mpl" >> Makefile
+
+echo "QUIET_MODE=" >> Makefile
+echo "QUIET_MODE=-q" >> Makefile
 echo "" >> Makefile
-echo "\$(PROJECT_NAME).mla: \$(PROJECT_NAME).mpl" >> Makefile
-echo -e "\tarchive_maple_project.py \$(PROJECT_NAME) \$(PROJECT_NAME) \$(PROJECT_NAME)" >> Makefile
+
+echo "QUIET_MODE=" >> Makefile
+echo "" >> Makefile
+
+echo ".PHONY: clean all" >> Makefile
+echo "" >> Makefile
+
+echo "all: \${OUTPUT}" >> Makefile
+echo "" >> Makefile
+
+echo "\${OUTPUT}: \${PROJECT_NAME}.mla \${TEST_FILE}" >> Makefile
+echo -e "\tif [ -f \${LOG_FILE} ]; then rm \${LOG_FILE}; fi;" >> Makefile
+echo -e "\tmaple \${TEST_FILE} \${QUIET_MODE} \${FLAGS} > \${OUTPUT}" >> Makefile
+echo "" >> Makefile
+
+echo "\${PROJECT_NAME}.mla: \${PROJECT_NAME}.mpl" >> Makefile
+echo -e "\tarchive_maple_project.py \${PROJECT_NAME} \${PROJECT_NAME} \${PROJECT_NAME}" >> Makefile
+echo "" >> Makefile
+
+echo "clean:" >> Makefile
+echo -e "\trm -rf \${PROJECT_NAME}.mla:" >> Makefile
 
 touch test.mpl
 echo "with(${PROJECT_NAME}):" >> test.mpl
