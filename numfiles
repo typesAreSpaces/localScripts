@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# Check if directory is provided
+if [ -z "$1" ]; then
+    echo "Usage: $0 <directory>"
+    exit 1
+fi
+
+DIR="$1"
+
+# Check if it is a valid directory
+if [ ! -d "$DIR" ]; then
+    echo "Error: $DIR is not a directory"
+    exit 1
+fi
+
+echo "Counting files in: $DIR"
+echo
+
+# Count files recursively
+total_count=$(find "$DIR" -type f | wc -l)
+echo "Total files: $total_count"
+
+echo
+echo "Files per subdirectory:"
+
+# Loop through subdirectories
+find "$DIR" -type d | while read -r subdir; do
+    count=$(find "$subdir" -maxdepth 1 -type f | wc -l)
+    echo "$subdir: $count"
+done
