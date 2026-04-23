@@ -1,6 +1,6 @@
 #!/bin/sh
 
-SOURCE=$HOME/Documents/GithubProjects/phd-thesis/Software/Mathematica/Packages
+SOURCE=$HOME/Documents/GithubProjects/MathematicaPackages
 TARGET=$HOME/Library/Mathematica/Applications
 
 for PACKAGE_PATH in $SOURCE/*; do
