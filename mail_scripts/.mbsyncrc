@@ -19,3 +19,25 @@ Near :gmail-local:
 Patterns *
 Create Both
 SyncState *
+
+IMAPAccount gmail2
+Host imap.gmail.com
+User jcastellanosjoo@gmail.com
+PassCmd "pass email/Mbsync-jcastellanosjoo@gmail.com"
+SSLType IMAPS
+AuthMechs PLAIN
+
+IMAPStore gmail2-remote
+Account gmail2
+
+MaildirStore gmail2-local
+Path ~/Mail/gmail2/
+Inbox ~/Mail/gmail2/INBOX
+SubFolders Verbatim
+
+Channel gmail2
+Far :gmail2-remote:
+Near :gmail2-local:
+Patterns *
+Create Both
+SyncState *
