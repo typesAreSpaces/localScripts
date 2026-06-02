@@ -3,11 +3,6 @@
 import sys
 import os
 
-# dir := FileTools:-JoinPath([currentdir(), "/<libname>.mla"]);
-# march('create', dir);
-# read "<filename>.mpl";
-# savelib('<modulename>', dir);
-
 if __name__ == "__main__":
     if len(sys.argv) != 4:
         sys.exit(1)
