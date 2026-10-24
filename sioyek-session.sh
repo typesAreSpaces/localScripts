@@ -15,6 +15,10 @@ Commands:
   list                   List saved sessions and automatic backups.
   restore NAME           Back up current state, then restore a session.
   restore-backup NAME    Back up current state, then restore an automatic backup.
+  names KIND             Print bare names of 'sessions' or 'backups' (no lock).
+  completion zsh         Print a zsh fzf Tab completion for restore NAMEs; add
+                         eval "$(sioyek-session.sh completion zsh)" to ~/.zshrc
+                         AFTER fzf's own setup is sourced.
 Options (must precede command):
   --state-dir DIR        Default: ~/Library/Application Support/sioyek
   --local-db FILE        Override local.db independently.
@@ -63,8 +67,79 @@ case $cmd in
     [ ${#name} -le 80 ] || die "Name too long"
     case $name in ''|[!a-zA-Z0-9]*|*[!a-zA-Z0-9._-]*) die "Invalid name" ;; esac ;;
   paths|list) [ $# -eq 0 ] || die "Unexpected arguments" ;;
+  names)
+    [ $# -eq 1 ] || die "names requires sessions or backups"
+    case $1 in sessions|backups) kind=$1 ;; *) die "names requires sessions or backups" ;; esac ;;
+  completion) [ $# -eq 1 ] && [ "$1" = zsh ] || die "Usage: completion zsh" ;;
   *) die "Unknown command: $cmd" ;;
 esac
+if [ "$cmd" = completion ]; then
+cat <<'ZSH'
+# Tab after "sioyek-session.sh [options] restore[-backup] " picks a name with fzf;
+# any other Tab falls through to the previously bound widget.
+_sioyek_session_fzf_tab() {
+  emulate -L zsh
+  local -a words options
+  local prefix='' raw_prefix='' exe kind selected
+  local -i i=1 command_index
+  words=(${(z)LBUFFER})
+  if [[ -n $LBUFFER && $LBUFFER != *[[:space:]] ]]; then
+    raw_prefix=${words[-1]}
+    prefix=${(Q)raw_prefix}
+    words[-1]=()
+  fi
+  while (( i <= $#words )); do
+    exe=${(Q)words[i]}
+    [[ ${exe:t} == sioyek-session.sh ]] && break
+    (( i++ ))
+  done
+  command_index=$(( i + 1 ))
+  while (( command_index < $#words )); do
+    case ${(Q)words[command_index]} in
+      --state-dir|--local-db|--shared-db|--last-file|--store)
+        options+=("${(@Q)words[command_index,command_index+1]}")
+        (( command_index += 2 )) ;;
+      *) break ;;
+    esac
+  done
+  if (( command_index == $#words )); then
+    case ${(Q)words[command_index]} in
+      restore) kind=sessions ;;
+      restore-backup) kind=backups ;;
+    esac
+  fi
+  if [[ -z $kind ]] || (( ! $+commands[fzf] )); then
+    zle "${_sioyek_session_prev_tab:-expand-or-complete}"
+    return
+  fi
+  [[ $exe == '~/'* ]] && exe=$HOME/${exe#'~/'}
+  selected=$("$exe" "${options[@]}" names "$kind" 2>/dev/null |
+    command fzf --height=40% --reverse --select-1 --exit-0 \
+      --no-multi --bind=tab:accept --prompt="$kind> " --query="$prefix") || return 0
+  if [[ -n $selected ]]; then
+    LBUFFER="${LBUFFER[1,$(( ${#LBUFFER} - ${#raw_prefix} ))]}${(q)selected} "
+  fi
+  zle reset-prompt
+}
+# Split bindkey's output into shell words, rather than indexing its characters.
+_sioyek_session_tab_binding=(${(z)$(bindkey '^I')})
+if [[ ${_sioyek_session_tab_binding[2]} != _sioyek_session_fzf_tab ]]; then
+  _sioyek_session_prev_tab=${_sioyek_session_tab_binding[2]}
+fi
+unset _sioyek_session_tab_binding
+zle -N _sioyek_session_fzf_tab
+bindkey '^I' _sioyek_session_fzf_tab
+ZSH
+exit 0
+fi
+if [ "$cmd" = names ]; then
+  case $store in /*) ;; *) die "Store must be an absolute path" ;; esac
+  for entry in "$store/$kind"/*; do
+    [ -d "$entry" ] && [ ! -L "$entry" ] || continue
+    printf '%s\n' "${entry##*/}"
+  done
+  exit 0
+fi
 # Require existing parent directories; never create an accidentally mistyped live path.
 canonical_file() {
   case $1 in /*) ;; *) die "Use an absolute path: $1" ;; esac

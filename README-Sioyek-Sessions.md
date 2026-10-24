@@ -98,3 +98,21 @@ References:
 
 - [Sioyek: scripting and database documentation](https://sioyek-documentation.readthedocs.io/en/latest/scripting.html)
 - [Sioyek: configuration documentation](https://sioyek-documentation.readthedocs.io/en/latest/configuration.html)
+
+## fzf Tab completion (zsh)
+
+With [fzf](https://github.com/junegunn/fzf) installed, add this to `~/.zshrc` *after* fzf's own setup is sourced:
+
+```zsh
+eval "$(sioyek-session.sh completion zsh)"
+```
+
+Pressing Tab after `sioyek-session.sh restore ` (or `restore-backup `) opens fzf on the saved names, prefilled with any partial name already typed. Press Tab or Enter in fzf to accept a name; Escape cancels. Every other Tab falls through to the previous binding. `sioyek-session.sh names sessions|backups` prints the bare names without taking the store lock.
+
+After changing the script, reload the completion in any already-open terminal:
+
+```zsh
+eval "$(~/.local/scripts/sioyek-session.sh completion zsh)"
+```
+
+If an older version has already broken the Tab fallback, open a new terminal to reload the original binding and the updated completion together.
