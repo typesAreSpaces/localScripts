@@ -11,11 +11,15 @@ cat <<'HELP'
 Usage: sioyek-session.sh [options] COMMAND [NAME]
 Commands:
   paths                  Show resolved paths (does not change Sioyek).
-  save NAME              Save a new, immutable session; quit Sioyek first.
+  save NAME              Save the current state as a new session; quit Sioyek first.
   list                   List saved sessions and automatic backups.
   restore NAME           Back up current state, then restore a session.
   restore-backup NAME    Back up current state, then restore an automatic backup.
+  new                    Back up current state, then start with no open tabs.
+restore, restore-backup and new also write the current state back into the
+active session (see current) before switching, so its changes are kept.
   names KIND             Print bare names of 'sessions' or 'backups' (no lock).
+  current                Print the active session name, or nothing (no lock).
   completion zsh         Print a zsh fzf Tab completion for restore NAMEs; add
                          eval "$(sioyek-session.sh completion zsh)" to ~/.zshrc
                          AFTER fzf's own setup is sourced.
@@ -29,8 +33,9 @@ Options (must precede command):
 Environment equivalents: SIOYEK_STATE_DIR, SIOYEK_LOCAL_DB, SIOYEK_SHARED_DB,
 SIOYEK_LAST_FILE, SIOYEK_SESSION_STORE. Options override environment values.
 Names: 1–80 ASCII letters/digits/dots/underscores/hyphens, starting alphanumeric.
-Use a new name for every save. Restore replaces BOTH databases, including
-annotations and history; it does not merge them. PDFs/configs are not copied.
+save refuses existing names. Restore replaces BOTH databases, including
+annotations and history; it does not merge them. New keeps both databases and only
+clears the open tabs. PDFs/configs are not copied.
 No automatic quit, forced termination, or launch. Keep Sioyek closed throughout.
 This tool does not promise restoration of goto_tab, windows, or tab order.
 HELP
@@ -66,7 +71,7 @@ case $cmd in
     name=$1
     [ ${#name} -le 80 ] || die "Name too long"
     case $name in ''|[!a-zA-Z0-9]*|*[!a-zA-Z0-9._-]*) die "Invalid name" ;; esac ;;
-  paths|list) [ $# -eq 0 ] || die "Unexpected arguments" ;;
+  paths|list|current|new) [ $# -eq 0 ] || die "Unexpected arguments" ;;
   names)
     [ $# -eq 1 ] || die "names requires sessions or backups"
     case $1 in sessions|backups) kind=$1 ;; *) die "names requires sessions or backups" ;; esac ;;
@@ -132,6 +137,18 @@ bindkey '^I' _sioyek_session_fzf_tab
 ZSH
 exit 0
 fi
+# Name of the session the live state was last saved as or restored from.
+read_current() {
+  local marker="$store/current" active=''
+  [ -f "$marker" ] && [ ! -L "$marker" ] || return 0
+  IFS= read -r active < "$marker" || true
+  case $active in ''|[!a-zA-Z0-9]*|*[!a-zA-Z0-9._-]*) ;; *) printf '%s\n' "$active" ;; esac
+}
+if [ "$cmd" = current ]; then
+  case $store in /*) ;; *) die "Store must be an absolute path" ;; esac
+  read_current
+  exit 0
+fi
 if [ "$cmd" = names ]; then
   case $store in /*) ;; *) die "Store must be an absolute path" ;; esac
   for entry in "$store/$kind"/*; do
@@ -193,6 +210,16 @@ trap 'exit 143' TERM
 trap 'exit 129' HUP
 [ ! -L "$store/sessions" ] && [ ! -L "$store/backups" ] || die "Symlink storage subdirectories are unsupported"
 mkdir -p "$store/sessions" "$store/backups"
+set_current() {
+  local tmp
+  if [ -n "$1" ]; then
+    tmp=$(mktemp "$store/.current.XXXXXX")
+    printf '%s\n' "$1" > "$tmp"
+    mv -f "$tmp" "$store/current"
+  else
+    rm -f "$store/current"
+  fi
+}
 if [ "$cmd" = list ]; then
   for kind in sessions backups; do
     echo "$kind:"
@@ -266,8 +293,38 @@ snapshot() {
   done
   mv "$stage" "$dest"; stage=''
 }
+# Copy the backup just taken in $1 into the active session, so switching away
+# keeps whatever changed since it was saved or restored.
+update_active() {
+  local active dest old
+  active=$(read_current)
+  [ -n "$active" ] || return 0
+  dest="$store/sessions/$active"
+  [ -d "$dest" ] && [ ! -L "$dest" ] || return 0
+  stage=$(mktemp -d "$store/.update.XXXXXX")
+  cp -p "$1/"* "$stage/"
+  validate_snapshot "$stage"
+  old="$stage.old"
+  mv "$dest" "$old"
+  mv "$stage" "$dest"; stage=''
+  rm -rf "$old"
+  echo "Updated session: $active"
+}
+if [ "$cmd" = new ]; then
+  backup_name="$(date -u +%Y%m%dT%H%M%SZ)-$$"
+  snapshot "$store/backups/$backup_name"
+  echo "Current state backed up: $store/backups/$backup_name"
+  update_active "$store/backups/$backup_name"
+  assert_closed
+  # Only the tab list is dropped; annotations and history stay in the databases.
+  rm -f "$last_file"
+  set_current ''
+  echo "Started a blank session. You may now open Sioyek."
+  exit 0
+fi
 if [ "$cmd" = save ]; then
   snapshot "$store/sessions/$name"
+  set_current "$name"
   echo "Saved: $store/sessions/$name"
   exit 0
 fi
@@ -280,6 +337,7 @@ backup_name="$(date -u +%Y%m%dT%H%M%SZ)-$$"
 rollback="$store/backups/$backup_name"
 snapshot "$rollback"
 echo "Current state backed up: $rollback"
+update_active "$rollback"
 # Prepare all incoming files before replacing live state. Each rename is atomic,
 # but the multi-file restore is not crash-atomic. Backup enables manual recovery.
 stage=$(mktemp -d "$store/.restore.XXXXXX")
@@ -298,4 +356,5 @@ for i in 0 1 2; do
 done
 validate_db "$local_db"; validate_db "$shared_db"
 committing=0
+if [ "$cmd" = restore ]; then set_current "$name"; else set_current ''; fi
 echo "Restored: $name. You may now open Sioyek."
