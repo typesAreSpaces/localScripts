@@ -9,9 +9,13 @@ export PATH
 usage() {
 cat <<'HELP'
 Usage: sioyek-session.sh [options] COMMAND [NAME]
+       sioyek-session.sh [options] SOURCE DESTINATION
 Commands:
   paths                  Show resolved paths (does not change Sioyek).
   save NAME              Save the current state as a new session; quit Sioyek first.
+  clone SOURCE DESTINATION
+                         Copy a saved session to a new name without switching.
+                         SOURCE DESTINATION is shorthand (unless SOURCE is a command).
   list                   List saved sessions and automatic backups.
   restore NAME           Back up current state, then restore a session.
   restore-backup NAME    Back up current state, then restore an automatic backup.
@@ -20,7 +24,7 @@ restore, restore-backup and new also write the current state back into the
 active session (see current) before switching, so its changes are kept.
   names KIND             Print bare names of 'sessions' or 'backups' (no lock).
   current                Print the active session name, or nothing (no lock).
-  completion zsh         Print a zsh fzf Tab completion for restore NAMEs; add
+  completion zsh         Print zsh fzf Tab completion for commands and names; add
                          eval "$(sioyek-session.sh completion zsh)" to ~/.zshrc
                          AFTER fzf's own setup is sourced.
 Options (must precede command):
@@ -33,7 +37,9 @@ Options (must precede command):
 Environment equivalents: SIOYEK_STATE_DIR, SIOYEK_LOCAL_DB, SIOYEK_SHARED_DB,
 SIOYEK_LAST_FILE, SIOYEK_SESSION_STORE. Options override environment values.
 Names: 1–80 ASCII letters/digits/dots/underscores/hyphens, starting alphanumeric.
-save refuses existing names. Restore replaces BOTH databases, including
+save and clone refuse existing names. Clone copies the saved snapshot, without
+changing live state or the active session; Sioyek may remain open during cloning.
+Restore replaces BOTH databases, including
 annotations and history; it does not merge them. New keeps both databases and only
 clears the open tabs. PDFs/configs are not copied.
 No automatic quit, forced termination, or launch. Keep Sioyek closed throughout.
@@ -65,22 +71,33 @@ shared_db=${shared_db:-"$state/shared.db"}
 last_file=${last_file:-"$state/last_document_path.txt"}
 [ $# -ge 1 ] || { usage; exit 1; }
 cmd=$1; shift
+validate_name() {
+  [ ${#1} -le 80 ] || die "Name too long"
+  case $1 in ''|[!a-zA-Z0-9]*|*[!a-zA-Z0-9._-]*) die "Invalid name" ;; esac
+}
 case $cmd in
   save|restore|restore-backup)
     [ $# -eq 1 ] || die "$cmd requires exactly one name"
     name=$1
-    [ ${#name} -le 80 ] || die "Name too long"
-    case $name in ''|[!a-zA-Z0-9]*|*[!a-zA-Z0-9._-]*) die "Invalid name" ;; esac ;;
+    validate_name "$name" ;;
+  clone)
+    [ $# -eq 2 ] || die "clone requires source and destination names"
+    source_name=$1; name=$2
+    validate_name "$source_name"; validate_name "$name" ;;
   paths|list|current|new) [ $# -eq 0 ] || die "Unexpected arguments" ;;
   names)
     [ $# -eq 1 ] || die "names requires sessions or backups"
     case $1 in sessions|backups) kind=$1 ;; *) die "names requires sessions or backups" ;; esac ;;
   completion) [ $# -eq 1 ] && [ "$1" = zsh ] || die "Usage: completion zsh" ;;
-  *) die "Unknown command: $cmd" ;;
+  *)
+    [ $# -eq 1 ] || die "Unknown command: $cmd"
+    source_name=$cmd; name=$1; cmd=clone
+    validate_name "$source_name"; validate_name "$name" ;;
 esac
 if [ "$cmd" = completion ]; then
 cat <<'ZSH'
-# Tab after "sioyek-session.sh [options] restore[-backup] " picks a name with fzf;
+# Tab after "sioyek-session.sh [options] " picks a command with fzf;
+# after restore, restore-backup or clone it picks a source name.
 # any other Tab falls through to the previously bound widget.
 _sioyek_session_fzf_tab() {
   emulate -L zsh
@@ -107,9 +124,11 @@ _sioyek_session_fzf_tab() {
       *) break ;;
     esac
   done
-  if (( command_index == $#words )); then
+  if (( i <= $#words && command_index == $#words + 1 )) && [[ $prefix != --* ]]; then
+    kind=commands
+  elif (( command_index == $#words )); then
     case ${(Q)words[command_index]} in
-      restore) kind=sessions ;;
+      restore|clone) kind=sessions ;;
       restore-backup) kind=backups ;;
     esac
   fi
@@ -118,7 +137,12 @@ _sioyek_session_fzf_tab() {
     return
   fi
   [[ $exe == '~/'* ]] && exe=$HOME/${exe#'~/'}
-  selected=$("$exe" "${options[@]}" names "$kind" 2>/dev/null |
+  selected=$(
+    if [[ $kind == commands ]]; then
+      printf '%s\n' paths save clone list restore restore-backup new names current completion
+    else
+      "$exe" "${options[@]}" names "$kind" 2>/dev/null
+    fi |
     command fzf --height=40% --reverse --select-1 --exit-0 \
       --no-multi --bind=tab:accept --prompt="$kind> " --query="$prefix") || return 0
   if [[ -n $selected ]]; then
@@ -166,10 +190,12 @@ canonical_file() {
   [ -d "$parent" ] || die "Missing directory: $parent"
   printf '%s/%s\n' "$(cd "$parent" && pwd -P)" "$base"
 }
-local_db=$(canonical_file "$local_db")
-shared_db=$(canonical_file "$shared_db")
-last_file=$(canonical_file "$last_file")
-[ "$local_db" != "$shared_db" ] && [ "$local_db" != "$last_file" ] && [ "$shared_db" != "$last_file" ] || die "Live paths must be distinct"
+if [ "$cmd" != clone ]; then
+  local_db=$(canonical_file "$local_db")
+  shared_db=$(canonical_file "$shared_db")
+  last_file=$(canonical_file "$last_file")
+  [ "$local_db" != "$shared_db" ] && [ "$local_db" != "$last_file" ] && [ "$shared_db" != "$last_file" ] || die "Live paths must be distinct"
+fi
 files=("$local_db" "$shared_db" "$last_file")
 keys=(local.db shared.db last_document_path.txt)
 if [ "$cmd" = paths ]; then
@@ -310,6 +336,19 @@ update_active() {
   rm -rf "$old"
   echo "Updated session: $active"
 }
+if [ "$cmd" = clone ]; then
+  source_dir="$store/sessions/$source_name"
+  dest="$store/sessions/$name"
+  [ -d "$source_dir" ] && [ ! -L "$source_dir" ] || die "Snapshot not found or symlink: $source_dir"
+  [ ! -e "$dest" ] && [ ! -L "$dest" ] || die "Snapshot already exists: $dest"
+  validate_snapshot "$source_dir"
+  stage=$(mktemp -d "$store/.clone.XXXXXX")
+  cp -p "$source_dir/"* "$stage/"
+  validate_snapshot "$stage"
+  mv "$stage" "$dest"; stage=''
+  echo "Cloned: $source_name -> $name"
+  exit 0
+fi
 if [ "$cmd" = new ]; then
   backup_name="$(date -u +%Y%m%dT%H%M%SZ)-$$"
   snapshot "$store/backups/$backup_name"

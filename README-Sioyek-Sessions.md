@@ -27,6 +27,20 @@ After using Sioyek for a different project, quit it and save another snapshot:
 
 Open Sioyek normally afterward. Keep it closed for the entire save or restore operation. The script never quits or launches the app. A snapshot name cannot be overwritten: save under a new name to capture later changes. Restoring does not automatically save your current work as another named session, but it always creates a recovery backup.
 
+## Clone a saved session
+
+Copy an existing saved session to a new name:
+
+```bash
+/bin/bash ./sioyek-session.sh research-2026-10-20 research-copy
+# Equivalent explicit command:
+/bin/bash ./sioyek-session.sh clone research-2026-10-20 research-copy
+```
+
+The new session contains the source snapshot's databases and last-document state. Cloning refuses an existing destination and leaves the source, live state, and active session unchanged. It copies the saved snapshot, so any changes since the source was last saved are not included. Sioyek may remain open while cloning. Use the explicit `clone` command when the source name matches a command such as `new` or `save`.
+
+To switch to the copy later, quit Sioyek and run `sioyek-session.sh restore research-copy`.
+
 ## What a session includes
 
 - `local.db`: local document-path/hash mappings.
@@ -107,7 +121,9 @@ With [fzf](https://github.com/junegunn/fzf) installed, add this to `~/.zshrc` *a
 eval "$(sioyek-session.sh completion zsh)"
 ```
 
-Pressing Tab after `sioyek-session.sh restore ` (or `restore-backup `) opens fzf on the saved names, prefilled with any partial name already typed. Press Tab or Enter in fzf to accept a name; Escape cancels. Every other Tab falls through to the previous binding. `sioyek-session.sh names sessions|backups` prints the bare names without taking the store lock.
+Pressing Tab after `sioyek-session.sh ` opens fzf with the available commands, also when path options precede the command. A partial command such as `sioyek-session.sh cl` prefilters the picker.
+
+Pressing Tab after `sioyek-session.sh clone ` or `sioyek-session.sh restore ` opens fzf on the saved session names shown under `sessions:` in `list`. After `restore-backup `, it lists backup names instead. The picker is prefilled with any partial source name already typed. Press Tab or Enter in fzf to accept a name; Escape cancels. For `clone`, type the new destination name after selecting the source. Every other Tab falls through to the previous binding. `sioyek-session.sh names sessions|backups` prints the bare names without taking the store lock.
 
 After changing the script, reload the completion in any already-open terminal:
 
