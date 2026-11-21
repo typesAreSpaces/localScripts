@@ -49,6 +49,14 @@ MAPLEV_FORMAT_FILE="$1" "$emacs_bin" --batch -Q \
 (condition-case err
     (progn
       (require (quote cl-lib))
+      ;; Older MapleV releases use a face variable removed from newer Emacs.
+      ;; defvar preserves the original value on Emacs versions that provide it.
+      (require (quote font-lock))
+      (defvar font-lock-reference-face (quote font-lock-constant-face))
+      ;; Initialize the default without the obsolete EIEIO object-name argument.
+      (require (quote maplev-config))
+      (defvar maplev-config-default
+        (make-instance (quote maplev-config-class)))
       (require (quote maplev))
       (let ((enable-local-variables nil)
             (enable-local-eval nil)
